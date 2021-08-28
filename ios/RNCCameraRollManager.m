@@ -105,9 +105,31 @@ static void requestPhotoLibraryAccess(RCTPromiseRejectBlock reject, PhotosAuthor
   } else if (authStatus == PHAuthorizationStatusAuthorized) {
     authorizedBlock();
   } else if (authStatus == PHAuthorizationStatusNotDetermined) {
-    [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
-      requestPhotoLibraryAccess(reject, authorizedBlock);
-    }];
+      if (@available(iOS 14, *)) {
+          [PHPhotoLibrary requestAuthorizationForAccessLevel:(PHAccessLevelAddOnly) handler:^(PHAuthorizationStatus status) {
+              if (status == PHAuthorizationStatusRestricted) {
+                  reject(kErrorAuthRestricted, @"Access to photo library is restricted", nil);
+              } else if (status == PHAuthorizationStatusAuthorized) {
+                  authorizedBlock();
+              } else if (status == PHAuthorizationStatusNotDetermined) {
+                  
+              } else {
+                  reject(kErrorAuthDenied, @"Access to photo library was denied", nil);
+              }
+          }];
+      } else {
+          [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+              if (status == PHAuthorizationStatusRestricted) {
+                  reject(kErrorAuthRestricted, @"Access to photo library is restricted", nil);
+              } else if (status == PHAuthorizationStatusAuthorized) {
+                  authorizedBlock();
+              } else if (status == PHAuthorizationStatusNotDetermined) {
+
+              } else {
+                  reject(kErrorAuthDenied, @"Access to photo library was denied", nil);
+              }
+          }];
+      }
   } else {
     reject(kErrorAuthDenied, @"Access to photo library was denied", nil);
   }
